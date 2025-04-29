@@ -2,6 +2,10 @@ package polsl.lab.take.project.model;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -14,6 +18,9 @@ public class Subject {
 
 	@OneToMany(mappedBy = "subject", cascade={CascadeType.ALL})
 	private Set<Grade> grades = new HashSet<Grade>();
+	
+	@ManyToMany(mappedBy = "subjects")
+	private Set<Student> students = new HashSet<Student>();
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

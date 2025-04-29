@@ -7,7 +7,7 @@ import lombok.*;
 @Table(name = "grades")
 @Getter
 @Setter
-public class Grade {
+public class Grade{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,4 +24,8 @@ public class Grade {
     @ManyToOne
     @JoinColumn(name="subject_id")
     private Subject subject;
+    
+    @ManyToOne
+    @JoinColumn(name="teacher_id")
+    private Teacher teacher;
 }

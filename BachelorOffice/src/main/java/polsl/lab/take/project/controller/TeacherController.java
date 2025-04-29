@@ -14,7 +14,7 @@ public class TeacherController {
 	private TeacherRepository teacherRepo;
 	
 	@PostMapping
-	public @ResponseBody String addStudent(@RequestParam Teacher teacher) {
+	public @ResponseBody String addTeacher(@RequestBody Teacher teacher) {
 		teacher = teacherRepo.save(teacher);
 		return "Added with id = " + teacher.getTeacherId();
 	}

@@ -14,7 +14,7 @@ public class GradeController {
 	private GradeRepository gradeRepo;
 	
 	@PostMapping
-	public @ResponseBody String addStudent(@RequestParam Grade grade) {
+	public @ResponseBody String addGrade(@RequestBody Grade grade) {
 		grade = gradeRepo.save(grade);
 		return "Added with id = " + grade.getGradeId();
 	}

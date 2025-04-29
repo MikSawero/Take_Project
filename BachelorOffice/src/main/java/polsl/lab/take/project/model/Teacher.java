@@ -3,6 +3,11 @@ package polsl.lab.take.project.model;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.springframework.data.annotation.Transient;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,8 +24,13 @@ import lombok.*;
 @Setter
 public class Teacher {
 	
+	//Z tego powinna być zwykła lista przedmiotów a nie cały JSON
+	@JsonIgnore
 	@OneToMany(mappedBy = "teacher", cascade={CascadeType.ALL})
 	private Set<Subject> subjects = new HashSet<Subject>();
+	
+	@OneToMany(mappedBy = "teacher", cascade= {CascadeType.ALL})
+	private Set<Grade> grades = new HashSet<Grade>();
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
