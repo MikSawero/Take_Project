@@ -1,7 +1,10 @@
 package polsl.lab.take.project.model;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -12,9 +15,6 @@ import jakarta.persistence.*;
 @Setter
 public class Subject {
 
-	@OneToMany(mappedBy = "subject", cascade={CascadeType.ALL})
-	private Set<Grade> grades = new HashSet<Grade>();
-	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "subject_id", nullable = false)
@@ -24,6 +24,12 @@ public class Subject {
 	private String subjectName;
 
 	@ManyToOne
+	@JsonIgnore
     @JoinColumn(name = "teacher_id")
     private Teacher teacher;
+	
+	@JsonIgnore
+	@OneToMany(mappedBy = "subject", cascade={CascadeType.ALL})
+	private List<Grade> grades = new ArrayList<Grade>();
+	
 }

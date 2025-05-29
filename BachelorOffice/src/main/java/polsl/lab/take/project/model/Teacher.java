@@ -1,11 +1,15 @@
 package polsl.lab.take.project.model;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,10 +22,7 @@ import lombok.*;
 @Getter
 @Setter
 public class Teacher {
-	
-	@OneToMany(mappedBy = "teacher", cascade={CascadeType.ALL})
-	private Set<Subject> subjects = new HashSet<Subject>();
-	
+		
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "teacher_id")
@@ -32,4 +33,13 @@ public class Teacher {
 	
 	@Column(name = "surname", nullable = false, length = 20)
 	private String surname;
+	
+	@JsonIgnore
+	@OneToMany(mappedBy = "teacher", cascade= {CascadeType.ALL})
+	private List<Grade> grades = new ArrayList<Grade>();
+
+	@JsonIgnore
+	@OneToMany(mappedBy = "teacher", cascade={CascadeType.ALL}, fetch=FetchType.LAZY)
+	private List<Subject> subjects = new ArrayList<>();
 }
+

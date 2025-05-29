@@ -8,8 +8,9 @@ import org.springframework.stereotype.Repository;
 import polsl.lab.take.project.model.Grade;
 
 @Repository
-public interface GradeRepository extends JpaRepository<Grade, Long>{
-
-	List<Grade> findByGradeId(Long gradeId);
-	List<Grade> findAll();
+public interface GradeRepository extends JpaRepository<Grade, Long> {
+    List<Grade> findByStudent_StudentId(Long studentId);
+    List<Grade> findBySubject_SubjectId(Long subjectId);
+    List<Grade> findByTeacher_TeacherId(Long teacherId);
 }
+
