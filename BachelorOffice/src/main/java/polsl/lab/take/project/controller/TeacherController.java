@@ -47,22 +47,25 @@ public class TeacherController {
 	    		.orElseThrow(() -> new RuntimeException("Teachers not found"));
 	    return teacher.getSubjects();
     }
-    
     @GetMapping("{teacherId}/grades")
 	public List<Grade> getGradesForTeacher(@PathVariable Long teacherId) {
 		Teacher teacher = teacherRepo.findById(teacherId)
 				.orElseThrow(() -> new RuntimeException("Teacher not found"));
-		return teacher.getGrades();
+		return teacher.getSubjects()
+	            .stream()
+	            .flatMap(subject -> subject.getGrades().stream())
+	            .distinct()
+	            .collect(Collectors.toList());
 	}
-    
     @GetMapping("{teacherId}/students")
 	public List<Student> getStudentsForTeacher(@PathVariable Long teacherId) {
 		Teacher teacher = teacherRepo.findById(teacherId)
 				.orElseThrow(() -> new RuntimeException("Teacher not found"));
-		return teacher.getGrades().stream()
-	    		.map(Grade::getStudent)
-	    		.distinct()
-	    		.collect(Collectors.toList());
+		return teacher.getSubjects().stream()
+	            .flatMap(subject -> subject.getGrades().stream())
+	            .map(Grade::getStudent)
+	            .distinct()
+	            .collect(Collectors.toList());
     }
     
 }

@@ -33,10 +33,6 @@ public class Teacher {
 	
 	@Column(name = "surname", nullable = false, length = 20)
 	private String surname;
-	
-	@JsonIgnore
-	@OneToMany(mappedBy = "teacher", cascade= {CascadeType.ALL})
-	private List<Grade> grades = new ArrayList<Grade>();
 
 	@JsonIgnore
 	@OneToMany(mappedBy = "teacher", cascade={CascadeType.ALL}, fetch=FetchType.LAZY)
