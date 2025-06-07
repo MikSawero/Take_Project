@@ -1,7 +1,9 @@
 package polsl.lab.take.project.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import polsl.lab.take.project.auth.StudentDTO;
 import polsl.lab.take.project.model.Student;
 import polsl.lab.take.project.model.Grade;
@@ -22,7 +24,7 @@ public class StudentController {
     @GetMapping("/{studentId}")
     public StudentDTO getStudent(@PathVariable Long studentId) {
         Student s = studentRepo.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
         
         return new StudentDTO(s);
     }
@@ -38,16 +40,22 @@ public class StudentController {
 	@GetMapping("/{studentId}/grades")
     public @ResponseBody List<Grade> getGradesForStudent(@PathVariable Long studentId) {
         Student student = studentRepo.findById(studentId)
-        		.orElseThrow(() -> new RuntimeException("Student not found"));
+        		.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
         return student.getGrades();
     }
     
     @GetMapping("/{studentId}/subjects")
     public @ResponseBody List<Subject> getSubjectsForStudent(@PathVariable Long studentId) {
 	    Student student = studentRepo.findById(studentId)
-	    		.orElseThrow(() -> new RuntimeException("Student not found"));
+	    		.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 	    return student.getGrades().stream()
 	    		.map(Grade::getSubject)
 	    		.collect(Collectors.toList());
+    }
+    
+    @PostMapping
+    public String addStudent(@RequestBody Student student) {
+    	student = studentRepo.save(student);
+        return "Added student with id = " + student.getStudentId();
     }
 }

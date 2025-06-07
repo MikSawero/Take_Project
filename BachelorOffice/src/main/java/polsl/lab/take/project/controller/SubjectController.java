@@ -1,7 +1,9 @@
 package polsl.lab.take.project.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import polsl.lab.take.project.model.Subject;
 import polsl.lab.take.project.model.Student;
@@ -11,6 +13,7 @@ import polsl.lab.take.project.repository.TeacherRepository;
 import polsl.lab.take.project.auth.SubjectDTO;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,17 +30,29 @@ public class SubjectController {
     public String addSubject(@RequestBody Subject subject) {
         if (subject.getTeacher() != null && subject.getTeacher().getTeacherId() != null) {
             Teacher teacher = teacherRepo.findById(subject.getTeacher().getTeacherId())
-                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
             subject.setTeacher(teacher);
         }
         subject = subjectRepo.save(subject);
         return "Added subject with id = " + subject.getSubjectId();
     }
+    
+    @PostMapping("/{subjectId}/teacher/{teacherId}")
+    public String addTeacherToSubject(@PathVariable Long teacherId, @PathVariable Long subjectId) {
+    	if(teacherRepo.findById(teacherId) != null && subjectRepo.findById(subjectId) != null) {
+    		Subject subject = subjectRepo.findById(subjectId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found"));
+    		Teacher teacher = teacherRepo.findById(teacherId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
+    		subject.setTeacher(teacher);
+    	}
+    	Subject subject = subjectRepo.findById(subjectId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found"));
+		subject = subjectRepo.save(subject);
+    	return "Added teacher with ID = " + teacherId.toString() + " to subject: " + subject.getSubjectName();
+    }
 
     @GetMapping("/{subjectId}")
     public SubjectDTO getSubject(@PathVariable Long subjectId) {
         Subject subject = subjectRepo.findById(subjectId)
-                .orElseThrow(() -> new RuntimeException("Subject not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found"));
 
         return new SubjectDTO(
                 subject.getSubjectId(),

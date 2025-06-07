@@ -1,7 +1,9 @@
 package polsl.lab.take.project.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import polsl.lab.take.project.model.Teacher;
 import polsl.lab.take.project.model.Grade;
@@ -29,7 +31,7 @@ public class TeacherController {
     @GetMapping("/{teacherId}")
     public TeacherDTO getTeacher(@PathVariable Long teacherId) {
         Teacher teacher = teacherRepo.findById(teacherId)
-                .orElseThrow(() -> new RuntimeException("Teacher not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
 
         return new TeacherDTO(teacher);
     }
@@ -44,13 +46,13 @@ public class TeacherController {
     @GetMapping("{teacherId}/subjects")
     public List<Subject> getSubjectsForTeacher(@PathVariable Long teacherId) {
     	Teacher teacher = teacherRepo.findById(teacherId)
-	    		.orElseThrow(() -> new RuntimeException("Teachers not found"));
+	    		.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teachers not found"));
 	    return teacher.getSubjects();
     }
     @GetMapping("{teacherId}/grades")
 	public List<Grade> getGradesForTeacher(@PathVariable Long teacherId) {
 		Teacher teacher = teacherRepo.findById(teacherId)
-				.orElseThrow(() -> new RuntimeException("Teacher not found"));
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
 		return teacher.getSubjects()
 	            .stream()
 	            .flatMap(subject -> subject.getGrades().stream())
@@ -60,12 +62,23 @@ public class TeacherController {
     @GetMapping("{teacherId}/students")
 	public List<Student> getStudentsForTeacher(@PathVariable Long teacherId) {
 		Teacher teacher = teacherRepo.findById(teacherId)
-				.orElseThrow(() -> new RuntimeException("Teacher not found"));
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
 		return teacher.getSubjects().stream()
 	            .flatMap(subject -> subject.getGrades().stream())
 	            .map(Grade::getStudent)
 	            .distinct()
 	            .collect(Collectors.toList());
+    }
+    
+    @DeleteMapping("/{teacherId}")
+    public String deleteTeacher(@PathVariable Long teacherId) {
+    	try {
+    		Teacher t = teacherRepo.findById(teacherId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
+    		teacherRepo.delete(t);
+    	} catch (Exception e) {
+    		throw e;
+    	}
+    	return "Deleted teacher with id = " + teacherId;
     }
     
 }
