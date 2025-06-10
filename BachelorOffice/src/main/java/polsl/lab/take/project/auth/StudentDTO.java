@@ -9,9 +9,12 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import org.springframework.hateoas.RepresentationModel;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 @Getter
 @Setter
 @AllArgsConstructor
+@Schema(description = "Data Transfer Object for Student resource with HATEOAS links")
 public class StudentDTO extends RepresentationModel<StudentDTO>{
 	
 	public StudentDTO(Student student) {
@@ -31,7 +34,24 @@ public class StudentDTO extends RepresentationModel<StudentDTO>{
 				 .getStudent(student.getStudentId())).withSelfRel());
 	}
 	
-    private Long studentId;
-    private String name;
-    private String surname;
+	@Schema(
+	        description = "Unique identifier of the student",
+	        example = "101",
+	        accessMode = Schema.AccessMode.READ_ONLY
+	    )
+	    private Long studentId;
+	    
+	    @Schema(
+	        description = "First name of the student",
+	        example = "John",
+	        required = true
+	    )
+	    private String name;
+	    
+	    @Schema(
+	        description = "Last name of the student",
+	        example = "Doe",
+	        required = true
+	    )
+	    private String surname;
 }

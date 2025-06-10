@@ -6,8 +6,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+
 import polsl.lab.take.project.model.Grade;
 import polsl.lab.take.project.repository.GradeRepository;
 import polsl.lab.take.project.auth.GradeDTO;
@@ -28,8 +34,12 @@ public class GradeController {
 	@PostMapping
 	@Operation(summary = "Add a grade to database", description = "Adds a new grade to the database")
 	@ApiResponses({
-
-	})
+			@ApiResponse(responseCode = "200", description = "Grade successfully added", content = {
+					@Content(mediaType = "application/json", schema = @Schema(implementation = Grade.class)) }),
+			@ApiResponse(responseCode = "400", description = "Invalid input data. Possible reasons:\n"
+					+ "1. Missing required fields (student, subject, grade)\n" + "2. Invalid grade value type\n"
+					+ "3. Non-existing student/subject references", content = @Content),
+			@ApiResponse(responseCode = "500", description = "Internal server error.", content = @Content) })
 	public String addGrade(@RequestBody Grade grade) {
 		grade = gradeRepo.save(grade);
 		return "Added grade with id = " + grade.getGradeId();
@@ -40,8 +50,10 @@ public class GradeController {
 	@PutMapping("/{gradeId}")
 	@Operation(summary = "Update a grade in database", description = "Updates a grade with given ID with new values")
 	@ApiResponses({
-
-	})
+			@ApiResponse(responseCode = "200", content = {
+					@Content(mediaType = "application/json", schema = @Schema(implementation = Grade.class)) }),
+			@ApiResponse(responseCode = "404", description = "No grade found", content = @Content),
+			@ApiResponse(responseCode = "500", description = "Internal error", content = @Content) })
 	public String updateGrade(@PathVariable Long gradeId, @RequestBody Grade grade) {
 		Grade newGrade = gradeRepo.findById(gradeId).map(existingGrade -> {
 			existingGrade.setGradeId(gradeId);
@@ -57,8 +69,8 @@ public class GradeController {
 	@GetMapping
 	@Operation(summary = "Get all grades", description = "Returns all grades in database")
 	@ApiResponses({
-
-	})
+			@ApiResponse(responseCode = "200", description = "Successfully retrieved all grades", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = GradeDTO.class)))),
+			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
 	public List<GradeDTO> getAllGrades() {
 		List<GradeDTO> gradeDTO = new ArrayList<>();
 		for (Grade grade : gradeRepo.findAll())
@@ -69,8 +81,9 @@ public class GradeController {
 	@GetMapping("/{gradeId}")
 	@Operation(summary = "Get a grade with given ID", description = "Return a grade with given ID")
 	@ApiResponses({
-
-	})
+			@ApiResponse(responseCode = "200", description = "Successfully retrieved grade", content = @Content(mediaType = "application/json", schema = @Schema(implementation = GradeDTO.class))),
+			@ApiResponse(responseCode = "404", description = "Grade not found", content = @Content),
+			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
 	public GradeDTO getGrade(@PathVariable Long gradeId) {
 		Grade grade = gradeRepo.findById(gradeId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Grade not found"));
@@ -81,7 +94,26 @@ public class GradeController {
 	@DeleteMapping("/{gradeId}")
 	@Operation(summary = "Delete a grade", description = "Deletes a grade with given ID")
 	@ApiResponses({
-
+	    @ApiResponse(
+	        responseCode = "200",
+	        description = "Grade successfully deleted",
+	        content = @Content(
+	            mediaType = "text/plain",
+	            examples = @ExampleObject(
+	                value = "Deleted grade with id = 123"
+	            )
+	        )
+	    ),
+	    @ApiResponse(
+	        responseCode = "404",
+	        description = "Grade not found",
+	        content = @Content
+	    ),
+	    @ApiResponse(
+	        responseCode = "500",
+	        description = "Internal server error",
+	        content = @Content
+	    )
 	})
 	public String deleteGrade(@PathVariable Long gradeId) {
 		try {
