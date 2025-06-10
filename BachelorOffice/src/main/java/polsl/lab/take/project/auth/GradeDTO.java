@@ -10,49 +10,28 @@ import polsl.lab.take.project.model.Grade;
 @AllArgsConstructor
 @Schema(description = "Data Transfer Object for Grade resource")
 public class GradeDTO extends RepresentationModel<GradeDTO> {
-    
-    public GradeDTO(Grade grade) {
-        super();
-        this.gradeId = grade.getGradeId();
-        this.grade = grade.getGrade();
-        this.studentId = grade.getStudent().getStudentId();
-        this.subjectId = grade.getSubject().getSubjectId();
-        this.teacherId = grade.getTeacher().getTeacherId();
-    }
 
-    @Schema(
-        description = "Unique identifier of the grade",
-        example = "12345",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
-    private Long gradeId;
+	public GradeDTO(Grade grade) {
+		super();
+		this.gradeId = grade.getGradeId();
+		this.grade = grade.getGrade();
+		this.studentId = grade.getStudent().getStudentId();
+		this.subjectId = grade.getSubject().getSubjectId();
+		this.teacherId = grade.getTeacher().getTeacherId();
+	}
 
-    @Schema(
-        description = "Numeric value of the grade (1-5 or other scale)",
-        example = "5",
-        minimum = "1",
-        maximum = "5"
-    )
-    private Integer grade;
+	@Schema(description = "Unique identifier of the grade", example = "12345", accessMode = Schema.AccessMode.READ_ONLY)
+	private Long gradeId;
 
-    @Schema(
-        description = "ID of the student who received the grade",
-        example = "101",
-        required = true
-    )
-    private Long studentId;
+	@Schema(description = "Numeric value of the grade (1-5 or other scale)", example = "5", minimum = "1", maximum = "5")
+	private Integer grade;
 
-    @Schema(
-        description = "ID of the subject the grade is for",
-        example = "202",
-        required = true
-    )
-    private Long subjectId;
+	@Schema(description = "ID of the student who received the grade", example = "101", required = true)
+	private Long studentId;
 
-    @Schema(
-        description = "ID of the teacher who assigned the grade",
-        example = "303",
-        required = true
-    )
-    private Long teacherId;
+	@Schema(description = "ID of the subject the grade is for", example = "202", required = true)
+	private Long subjectId;
+
+	@Schema(description = "ID of the teacher who assigned the grade", example = "303", required = true)
+	private Long teacherId;
 }

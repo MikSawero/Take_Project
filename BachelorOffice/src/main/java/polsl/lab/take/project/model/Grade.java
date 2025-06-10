@@ -20,7 +20,8 @@ public class Grade{
     		description = "grade id",
     		name = "gradeId",
     		type = "Long",
-    		example = "1"
+    		example = "1",
+            accessMode = Schema.AccessMode.READ_ONLY
     		)
     private Long gradeId;
 

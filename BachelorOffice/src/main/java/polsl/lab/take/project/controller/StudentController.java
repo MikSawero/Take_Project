@@ -31,6 +31,37 @@ public class StudentController {
 	@Autowired
 	private StudentRepository studentRepo;
 
+	@PostMapping
+	@Operation(summary = "Add a student", description = "Add a student to the database")
+	@ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Student successfully added",
+            content = @Content(
+                mediaType = "text/plain",
+                examples = @ExampleObject(
+                    value = "Added student with id = 101"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid input data. Possible reasons:\n"
+                + "1. Missing required fields (name or surname)\n"
+                + "2. Name/surname exceeds 20 characters",
+            content = @Content
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content
+        )
+    })
+	public String addStudent(@RequestBody Student student) {
+		student = studentRepo.save(student);
+		return "Added student with id = " + student.getStudentId();
+	}
+	
 	@GetMapping("/{studentId}")
 	@Operation(summary = "Get a student", description = "Returns a student with given ID")
 	@ApiResponses({
@@ -134,36 +165,5 @@ public class StudentController {
 		Student student = studentRepo.findById(studentId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
 		return student.getGrades().stream().map(Grade::getSubject).collect(Collectors.toList());
-	}
-
-	@PostMapping
-	@Operation(summary = "Add a student", description = "Add a student to the database")
-	@ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Student successfully added",
-            content = @Content(
-                mediaType = "text/plain",
-                examples = @ExampleObject(
-                    value = "Added student with id = 101"
-                )
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid input data. Possible reasons:\n"
-                + "1. Missing required fields (name or surname)\n"
-                + "2. Name/surname exceeds 20 characters",
-            content = @Content
-        ),
-        @ApiResponse(
-            responseCode = "500",
-            description = "Internal server error",
-            content = @Content
-        )
-    })
-	public String addStudent(@RequestBody Student student) {
-		student = studentRepo.save(student);
-		return "Added student with id = " + student.getStudentId();
 	}
 }
