@@ -23,7 +23,7 @@ public class GradeDTO extends RepresentationModel<GradeDTO> {
 	@Schema(description = "Unique identifier of the grade", example = "12345", accessMode = Schema.AccessMode.READ_ONLY)
 	private Long gradeId;
 
-	@Schema(description = "Numeric value of the grade (1-5 or other scale)", example = "5", minimum = "1", maximum = "5")
+	@Schema(description = "Numeric value of the grade 2-5", example = "5", minimum = "2", maximum = "5")
 	private Integer grade;
 
 	@Schema(description = "ID of the student who received the grade", example = "101", required = true)

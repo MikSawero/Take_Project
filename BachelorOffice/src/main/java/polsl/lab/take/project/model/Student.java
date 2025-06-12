@@ -47,7 +47,7 @@ public class Student {
     private String surname;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     @Schema(
         description = "List of grades associated with the student",
         accessMode = Schema.AccessMode.READ_ONLY

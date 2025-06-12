@@ -11,4 +11,5 @@ import polsl.lab.take.project.model.Teacher;
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 	List<Teacher> findByTeacherId(Long teacherId);
     List<Teacher> findAll();
+    List<Teacher> findBySubjectsIsEmpty();
 }

@@ -2,6 +2,7 @@ package polsl.lab.take.project.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -10,13 +11,21 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 
 import polsl.lab.take.project.model.Grade;
+import polsl.lab.take.project.model.Student;
+import polsl.lab.take.project.model.Subject;
+import polsl.lab.take.project.model.Teacher;
 import polsl.lab.take.project.repository.GradeRepository;
+import polsl.lab.take.project.repository.StudentRepository;
+import polsl.lab.take.project.repository.SubjectRepository;
+import polsl.lab.take.project.repository.TeacherRepository;
 import polsl.lab.take.project.auth.GradeDTO;
+import polsl.lab.take.project.auth.GradeRequestDTO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,42 +37,102 @@ public class GradeController {
 
 	@Autowired
 	private GradeRepository gradeRepo;
+	
+	@Autowired
+	private StudentRepository studentRepo;
 
-	// TODO: FIX THIS ADDING BECAUSE RIGHT NOW THE STUDENT IS NULL AFTER ADDING
-	// (TRANSIENT/NON-PERSISTING RECORDS) --------------
+	@Autowired
+	private SubjectRepository subjectRepo;
+
+	@Autowired
+	private TeacherRepository teacherRepo;
+
 	@PostMapping
 	@Operation(summary = "Add a grade to database", description = "Adds a new grade to the database")
 	@ApiResponses({
-			@ApiResponse(responseCode = "200", description = "Grade successfully added", content = {
-					@Content(mediaType = "application/json", schema = @Schema(implementation = Grade.class)) }),
-			@ApiResponse(responseCode = "400", description = "Invalid input data. Possible reasons:\n"
-					+ "1. Missing required fields (student, subject, grade)\n" + "2. Invalid grade value type\n"
-					+ "3. Non-existing student/subject references", content = @Content),
-			@ApiResponse(responseCode = "500", description = "Internal server error.", content = @Content) })
-	public String addGrade(@RequestBody Grade grade) {
-		grade = gradeRepo.save(grade);
-		return "Added grade with id = " + grade.getGradeId();
+	    @ApiResponse(responseCode = "201", description = "Grade successfully added", content = {
+	        @Content(mediaType = "application/json", schema = @Schema(implementation = GradeDTO.class))
+	    }),
+	    @ApiResponse(responseCode = "400", description = "Invalid input data (missing or invalid fields)", content = @Content),
+	    @ApiResponse(responseCode = "404", description = "Referenced Student/Subject/Teacher not found", content = @Content),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
+	public ResponseEntity<GradeDTO> addGrade(@Valid @RequestBody GradeRequestDTO dto) {
+
+	    Student student = studentRepo.findById(dto.getStudentId())
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Student not found with id " + dto.getStudentId()));
+
+	    Subject subject = subjectRepo.findById(dto.getSubjectId())
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Subject not found with id " + dto.getSubjectId()));
+
+	    Teacher teacher = teacherRepo.findById(dto.getTeacherId())
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Teacher not found with id " + dto.getTeacherId()));
+
+
+	    Grade gradeEntity = new Grade();
+	    gradeEntity.setGrade(dto.getGrade());
+	    gradeEntity.setStudent(student);
+	    gradeEntity.setSubject(subject);
+	    gradeEntity.setTeacher(teacher);
+
+	    Grade saved;
+	    try {
+	        saved = gradeRepo.save(gradeEntity);
+	    } catch (Exception e) {
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+	                "Błąd podczas zapisu oceny: " + e.getMessage());
+	    }
+
+	    GradeDTO responseDto = new GradeDTO(saved);
+	    return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
 	}
 
-	// TODO: FIX THIS FUNCTION
-	// --------------------------------------------------------------------------------------------------
 	@PutMapping("/{gradeId}")
 	@Operation(summary = "Update a grade in database", description = "Updates a grade with given ID with new values")
 	@ApiResponses({
-			@ApiResponse(responseCode = "200", content = {
-					@Content(mediaType = "application/json", schema = @Schema(implementation = Grade.class)) }),
-			@ApiResponse(responseCode = "404", description = "No grade found", content = @Content),
-			@ApiResponse(responseCode = "500", description = "Internal error", content = @Content) })
-	public String updateGrade(@PathVariable Long gradeId, @RequestBody Grade grade) {
-		Grade newGrade = gradeRepo.findById(gradeId).map(existingGrade -> {
-			existingGrade.setGradeId(gradeId);
-			existingGrade.setGrade(grade.getGrade());
-			existingGrade.setStudent(grade.getStudent());
-			existingGrade.setSubject(grade.getSubject());
-			existingGrade.setTeacher(grade.getTeacher());
-			return gradeRepo.save(existingGrade);
-		}).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No grade found with this Id"));
-		return "Updated grade with id = " + newGrade.getGradeId();
+	    @ApiResponse(responseCode = "200", description = "Grade successfully updated", content = {
+	        @Content(mediaType = "application/json", schema = @Schema(implementation = GradeDTO.class))
+	    }),
+	    @ApiResponse(responseCode = "400", description = "Invalid input data (missing or invalid fields)", content = @Content),
+	    @ApiResponse(responseCode = "404", description = "Grade or referenced Student/Subject/Teacher not found", content = @Content),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
+	public ResponseEntity<GradeDTO> updateGrade(
+	        @PathVariable Long gradeId,
+	        @Valid @RequestBody GradeRequestDTO dto) {
+		
+	    Grade existingGrade = gradeRepo.findById(gradeId)
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Grade not found with id " + gradeId));
+
+	    Student student = studentRepo.findById(dto.getStudentId())
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Student not found with id " + dto.getStudentId()));
+	    Subject subject = subjectRepo.findById(dto.getSubjectId())
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Subject not found with id " + dto.getSubjectId()));
+	    Teacher teacher = teacherRepo.findById(dto.getTeacherId())
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Teacher not found with id " + dto.getTeacherId()));
+
+	    existingGrade.setGrade(dto.getGrade());
+	    existingGrade.setStudent(student);
+	    existingGrade.setSubject(subject);
+	    existingGrade.setTeacher(teacher);
+
+	    Grade updated;
+	    try {
+	        updated = gradeRepo.save(existingGrade);
+	    } catch (Exception e) {
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+	                "Error updating grade: " + e.getMessage());
+	    }
+
+	    GradeDTO responseDto = new GradeDTO(updated);
+	    return ResponseEntity.ok(responseDto);
 	}
 
 	@GetMapping
@@ -75,6 +144,51 @@ public class GradeController {
 		List<GradeDTO> gradeDTO = new ArrayList<>();
 		for (Grade grade : gradeRepo.findAll())
 			gradeDTO.add(new GradeDTO(grade));
+		return gradeDTO;
+	}
+	
+	@GetMapping("/gte")
+	@Operation(summary = "Get all grades >= value", description = "Returns all grades in database that are greater than or equal to given value")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Successfully retrieved all grades that match the constraint", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = GradeDTO.class)))),
+			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
+	public List<GradeDTO> getAllGradesGTE(@RequestParam int value){
+		List<GradeDTO> gradeDTO = new ArrayList<>();
+		for (Grade grade : gradeRepo.findAll()) {
+			if (grade.getGrade() >= value) {
+				gradeDTO.add(new GradeDTO(grade));
+			}
+		}
+		return gradeDTO;
+	}
+	
+	@GetMapping("/lte")
+	@Operation(summary = "Get all grades <= value", description = "Returns all grades in database that are less than or equal to given value")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Successfully retrieved all grades that match the constraint", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = GradeDTO.class)))),
+			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
+	public List<GradeDTO> getAllGradesLTE(@RequestParam int value){
+		List<GradeDTO> gradeDTO = new ArrayList<>();
+		for (Grade grade : gradeRepo.findAll()) {
+			if (grade.getGrade() <= value) {
+				gradeDTO.add(new GradeDTO(grade));
+			}
+		}
+		return gradeDTO;
+	}
+	
+	@GetMapping("/eq")
+	@Operation(summary = "Get all grades == value", description = "Returns all grades in database that are equal to given value")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Successfully retrieved all grades that match the constraint", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = GradeDTO.class)))),
+			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
+	public List<GradeDTO> getAllGrades(@RequestParam int value){
+		List<GradeDTO> gradeDTO = new ArrayList<>();
+		for (Grade grade : gradeRepo.findAll()) {
+			if (grade.getGrade() == value) {
+				gradeDTO.add(new GradeDTO(grade));
+			}
+		}
 		return gradeDTO;
 	}
 

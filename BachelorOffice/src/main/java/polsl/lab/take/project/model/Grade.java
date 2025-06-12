@@ -31,7 +31,8 @@ public class Grade{
     @Schema(
     		description = "student object",
     		name = "student",
-    		type = "Student"
+    		type = "Student",
+    		example = "{\"student_id\":1}"
     		)
     private Student student;
     
@@ -50,7 +51,8 @@ public class Grade{
     @Schema(
     		description = "subject object",
     		name = "subject",
-    		type = "Subject"
+    		type = "Subject",
+    		example = "{\"subject_id\":1}"
     		)
     private Subject subject;
     
@@ -60,7 +62,8 @@ public class Grade{
     @Schema(
     		description = "teacher object",
     		name = "teacher",
-    		type = "Teacher"
+    		type = "Teacher",
+    		example = "{\"teacher_id\":1}"
     		)
     private Teacher teacher;
 }

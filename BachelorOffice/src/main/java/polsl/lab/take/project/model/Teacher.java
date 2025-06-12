@@ -54,9 +54,9 @@ public class Teacher {
 	private String surname;
 
 	@JsonIgnore
-	@OneToMany(mappedBy = "teacher", cascade={CascadeType.ALL}, fetch=FetchType.LAZY)
+	@OneToMany(mappedBy = "teacher", cascade={CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH}, fetch=FetchType.LAZY)
 	@Schema(
-	        description = "List of subjects associated with the student",
+	        description = "List of subjects associated with the teacher",
 	        accessMode = Schema.AccessMode.READ_ONLY
 	    )
 	private List<Subject> subjects = new ArrayList<>();

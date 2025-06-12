@@ -20,20 +20,24 @@ public class SubjectDTO extends RepresentationModel<SubjectDTO> {
 		super();
 		this.subjectId = subject.getSubjectId();
 		this.subjectName = subject.getSubjectName();
-		this.teacherId = subject.getTeacher().getTeacherId();
 
 		this.add(linkTo(methodOn(SubjectController.class).getStudentsForSubject(subject.getSubjectId()))
 				.withRel("students"));
 
-		this.add(linkTo(methodOn(SubjectController.class).getTeacherForSubject(subject.getSubjectId()))
-				.withRel("teacher"));
+		if (subject.getTeacher() != null && subject.getTeacher().getTeacherId() != null) {
+
+			this.teacherId = subject.getTeacher().getTeacherId();
+
+			this.add(linkTo(methodOn(SubjectController.class).getTeacherForSubject(subject.getSubjectId()))
+					.withRel("teacher"));
+		}
 	}
 
 	@Schema(description = "Unique identifier of the subject", example = "101", accessMode = Schema.AccessMode.READ_ONLY)
 	private Long subjectId;
 	@Schema(description = "Name of the subject", example = "Mathematics", required = true)
 	private String subjectName;
-	@Schema(description = "Id of the main teacher", example = "102", required = true)
+	@Schema(description = "Id of the main teacher", example = "102", required = false)
 	private Long teacherId;
 
 }

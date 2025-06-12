@@ -37,7 +37,7 @@ public class Subject {
 
 	@ManyToOne
 	@JsonIgnore
-    @JoinColumn(name = "teacher_id")
+    @JoinColumn(name = "teacher_id", nullable = true)
 	@Schema(
     		description = "Teacher object",
     		name = "teacher",
