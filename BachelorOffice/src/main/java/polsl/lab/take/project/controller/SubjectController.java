@@ -22,6 +22,7 @@ import polsl.lab.take.project.model.Student;
 import polsl.lab.take.project.model.Teacher;
 import polsl.lab.take.project.repository.SubjectRepository;
 import polsl.lab.take.project.repository.TeacherRepository;
+import polsl.lab.take.project.auth.GradeDTO;
 import polsl.lab.take.project.auth.StudentDTO;
 import polsl.lab.take.project.auth.SubjectDTO;
 import polsl.lab.take.project.auth.SubjectRequestDTO;
@@ -81,25 +82,78 @@ public class SubjectController {
 	}
 
 	@PostMapping("/{subjectId}/teacher/{teacherId}")
-	@Operation(summary = "Add a teacher to subject", description = "Adds a main teacher to the subject")
+	@Operation(summary = "Add a teacher to subject", description = "Assigns a main teacher to the subject")
 	@ApiResponses({
-			@ApiResponse(responseCode = "200", description = "Teacher successfully added to subject", content = @Content(mediaType = "text/plain", examples = @ExampleObject(value = "Added teacher with id = 101 to subject: Math"))),
-			@ApiResponse(responseCode = "400", description = "Invalid input data. Possible reasons:\n"
-					+ "1. Missing required fields (teacherId or subjectId)\n", content = @Content),
-			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
-	public String addTeacherToSubject(@PathVariable Long teacherId, @PathVariable Long subjectId) {
-		if (teacherRepo.findById(teacherId) != null && subjectRepo.findById(subjectId) != null) {
-			Subject subject = subjectRepo.findById(subjectId)
-					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found"));
-			Teacher teacher = teacherRepo.findById(teacherId)
-					.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
-			subject.setTeacher(teacher);
-		}
-		Subject subject = subjectRepo.findById(subjectId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found"));
-		subject = subjectRepo.save(subject);
-		return "Added teacher with ID = " + teacherId.toString() + " to subject: " + subject.getSubjectName();
+	    @ApiResponse(responseCode = "200", description = "Teacher successfully assigned to subject", content = {
+	        @Content(mediaType = "application/json", schema = @Schema(implementation = SubjectDTO.class))
+	    }),
+	    @ApiResponse(responseCode = "400", description = "Invalid input data. Possible reasons:\n"
+	            + "1. subjectId or teacherId not a valid number", content = @Content),
+	    @ApiResponse(responseCode = "404", description = "Subject or Teacher not found", content = @Content),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
+	public ResponseEntity<SubjectDTO> addTeacherToSubject(
+	        @PathVariable Long subjectId,
+	        @PathVariable Long teacherId) {
+
+	    Subject subject = subjectRepo.findById(subjectId)
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Subject not found with id " + subjectId));
+	    Teacher teacher = teacherRepo.findById(teacherId)
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+	                    "Teacher not found with id " + teacherId));
+
+	    subject.setTeacher(teacher);
+
+	    Subject saved;
+	    try {
+	        saved = subjectRepo.save(subject);
+	    } catch (Exception e) {
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+	                "Error assigning teacher to subject");
+	    }
+
+	    SubjectDTO responseDto = new SubjectDTO(saved);
+	    return ResponseEntity.ok(responseDto);
 	}
+	
+	@PutMapping("/{subjectId}/{name}")
+    @Operation(summary = "Change subject name", description = "Updates the name of the subject identified by subjectId")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Subject name successfully updated", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = SubjectDTO.class))
+        }),
+        @ApiResponse(responseCode = "400", description = "Invalid name (empty or too long)", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Subject not found", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    public ResponseEntity<SubjectDTO> renameSubject(
+            @PathVariable Long subjectId,
+            @PathVariable String name) {
+
+        if (name == null || name.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Subject name must not be empty");
+        }
+        String newName = name.trim();
+
+        Subject subject = subjectRepo.findById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Subject not found with id " + subjectId));
+
+        subject.setSubjectName(newName);
+
+        Subject saved;
+        try {
+            saved = subjectRepo.save(subject);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Błąd podczas zmiany nazwy przedmiotu");
+        }
+
+        SubjectDTO dto = new SubjectDTO(saved);
+        return ResponseEntity.ok(dto);
+    }
+	
 
 	@GetMapping("/{subjectId}")
 	@Operation(summary = "Get subject", description = "Returns a subject with given ID")
@@ -173,6 +227,52 @@ public class SubjectController {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving subject with max grades", e);
         }
+    }
+	
+	@GetMapping("/{subjectId}/grades")
+    @Operation(summary = "Get all grades for a subject",
+               description = "Returns list of all grades assigned in the subject with given ID")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "List of grades retrieved", content = {
+            @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = GradeDTO.class)))
+        }),
+        @ApiResponse(responseCode = "404", description = "Subject not found", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    public ResponseEntity<List<GradeDTO>> getGradesForSubject(@PathVariable Long subjectId) {
+        Subject subject = subjectRepo.findById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Subject not found with id " + subjectId));
+        try {
+            List<GradeDTO> dtos = subject.getGrades().stream()
+                    .map(GradeDTO::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error downloading grades for subject " + subjectId);
+        }
+    }
+	
+	@DeleteMapping("/{subjectId}")
+    @Operation(summary = "Delete a subject", description = "Deletes a subject and all its related grades")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Subject successfully deleted"),
+        @ApiResponse(responseCode = "404", description = "Subject not found", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    public ResponseEntity<Void> deleteSubject(@PathVariable Long subjectId) {
+        Subject subject = subjectRepo.findById(subjectId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Subject not found with id " + subjectId));
+        try {
+            subjectRepo.delete(subject);
+        } catch (Exception e) {
+            // Log error: logger.error("Error deleting subject", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Błąd podczas usuwania przedmiotu");
+        }
+        return ResponseEntity.noContent().build();
     }
 	
 }

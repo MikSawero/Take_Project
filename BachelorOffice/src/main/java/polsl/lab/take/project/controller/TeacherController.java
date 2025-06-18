@@ -22,8 +22,12 @@ import polsl.lab.take.project.repository.SubjectRepository;
 import polsl.lab.take.project.repository.TeacherRepository;
 import polsl.lab.take.project.auth.StudentDTO;
 import polsl.lab.take.project.auth.TeacherDTO;
+import polsl.lab.take.project.auth.TeacherWithCountDTO;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -125,6 +129,44 @@ public class TeacherController {
 					"Error retrieving teachers without subjects", e);
 		}
 	}
+	
+	@GetMapping("/subjectSorted")
+    @Operation(summary = "Get teachers sorted by number of subjects",
+               description = "Returns list of teachers sorted by how many subjects they teach; param desc=true dla malejąco, false dla rosnąco")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "List of teachers sorted by subject count", content = {
+            @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = TeacherWithCountDTO.class)))
+        }),
+        @ApiResponse(responseCode = "400", description = "Invalid parameter", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    public ResponseEntity<List<TeacherWithCountDTO>> getTeachersSortedBySubjectCount(
+            @RequestParam(name = "desc", required = false, defaultValue = "true") boolean desc) {
+        try {
+            List<TeacherWithCountDTO> list = teacherRepo.findAll().stream()
+                .map(teacher -> {
+                    Long count = 0L;
+                    if (teacher.getSubjects() != null) {
+                        count = (long) teacher.getSubjects().size();
+                    }
+                    return new TeacherWithCountDTO(
+                        teacher.getTeacherId(),
+                        teacher.getName(),
+                        teacher.getSurname(),
+                        count
+                    );
+                })
+                .sorted(desc
+                        ? Comparator.comparing(TeacherWithCountDTO::getSubjectsCount).reversed()
+                        : Comparator.comparing(TeacherWithCountDTO::getSubjectsCount))
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(list);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Błąd podczas pobierania listy nauczycieli");
+        }
+    }
+	
 	// TODO: Fix this endpoint - referential identity violation when removing teacher
 	@DeleteMapping("/{teacherId}")
 	@Operation(summary = "Delete a teacher", description = "Deletes a teacher from database and clears references in subjects")
@@ -152,5 +194,4 @@ public class TeacherController {
 		}
 		return ResponseEntity.ok("Deleted teacher with id = " + teacherId);
 	}
-
 }

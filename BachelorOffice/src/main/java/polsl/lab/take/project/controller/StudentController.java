@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import polsl.lab.take.project.auth.GradeDTO;
 import polsl.lab.take.project.auth.StudentAverageDTO;
 import polsl.lab.take.project.auth.StudentDTO;
+import polsl.lab.take.project.auth.StudentRequestDTO;
 import polsl.lab.take.project.model.Student;
 import polsl.lab.take.project.model.Grade;
 import polsl.lab.take.project.model.Subject;
@@ -24,6 +26,8 @@ import polsl.lab.take.project.repository.StudentRepository;
 import polsl.lab.take.project.repository.SubjectRepository;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -38,29 +42,89 @@ public class StudentController {
 	private SubjectRepository subjectRepo;
 
 	@PostMapping
-	@Operation(summary = "Add a student", description = "Add a student to the database")
-	@ApiResponses({
-			@ApiResponse(responseCode = "200", description = "Student successfully added", content = @Content(mediaType = "text/plain", examples = @ExampleObject(value = "Added student with id = 101"))),
-			@ApiResponse(responseCode = "400", description = "Invalid input data. Possible reasons:\n"
-					+ "1. Missing required fields (name or surname)\n"
-					+ "2. Name/surname exceeds 20 characters", content = @Content),
-			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
-	public String addStudent(@RequestBody Student student) {
-		student = studentRepo.save(student);
-		return "Added student with id = " + student.getStudentId();
-	}
+    @Operation(summary = "Add a student", description = "Add a student to the database")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Student successfully added", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = StudentDTO.class))
+        }),
+        @ApiResponse(responseCode = "400", description = "Invalid input data. Possible reasons:\n"
+                     + "1. Missing required fields (name or surname)\n"
+                     + "2. Name/surname exceeds 20 characters", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    public ResponseEntity<StudentDTO> addStudent(@Valid @RequestBody StudentRequestDTO dto) {
+        Student studentEntity = new Student();
+        studentEntity.setName(dto.getName());
+        studentEntity.setSurname(dto.getSurname());
+        Student saved;
+        try {
+            saved = studentRepo.save(studentEntity);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error adding a student to database");
+        }
+        StudentDTO responseDto = new StudentDTO(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
 
+	@PutMapping("/{studentId}")
+    @Operation(summary = "Update student's surname", description = "Updates only the surname of the student identified by studentId")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Student surname successfully updated", content = {
+            @Content(mediaType = "application/json", schema = @Schema(implementation = StudentDTO.class))
+        }),
+        @ApiResponse(responseCode = "400", description = "Invalid surname (empty or exceeds length limit)", content = @Content),
+        @ApiResponse(responseCode = "404", description = "Student not found", content = @Content),
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+    })
+    public ResponseEntity<StudentDTO> updateStudentSurname(
+            @PathVariable Long studentId,
+            @RequestParam("surname") String surname) {
+
+        if (surname == null || surname.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Surname must not be empty");
+        }
+        String newSurname = surname.trim();
+        int MAX_LENGTH = 20;
+        if (newSurname.length() > MAX_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Surname must not exceed " + MAX_LENGTH + " characters");
+        }
+
+        Student student = studentRepo.findById(studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Student not found with id " + studentId));
+
+        student.setSurname(newSurname);
+
+        Student saved;
+        try {
+            saved = studentRepo.save(student);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Błąd podczas aktualizacji nazwiska studenta");
+        }
+
+        StudentDTO dto = new StudentDTO(saved);
+        return ResponseEntity.ok(dto);
+    }
+	
 	@GetMapping("/{studentId}")
 	@Operation(summary = "Get a student", description = "Returns a student with given ID")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Student successfully retrieved", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StudentDTO.class))),
 			@ApiResponse(responseCode = "404", description = "Student not found", content = @Content),
 			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
-	public StudentDTO getStudent(@PathVariable Long studentId) {
-		Student s = studentRepo.findById(studentId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+	public ResponseEntity<?> getStudent(@PathVariable Long studentId) {
+		Optional<Student> optionalStudent = studentRepo.findById(studentId);
 
-		return new StudentDTO(s);
+		if (optionalStudent.isPresent()) {
+			StudentDTO dto = new StudentDTO(optionalStudent.get());
+			return ResponseEntity.ok(dto);
+		} else {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body(Map.of("message", "Student with ID " + studentId + " not found"));
+		}
 	}
 
 	@GetMapping
