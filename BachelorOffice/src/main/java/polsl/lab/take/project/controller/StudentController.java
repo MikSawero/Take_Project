@@ -22,9 +22,11 @@ import polsl.lab.take.project.auth.StudentRequestDTO;
 import polsl.lab.take.project.model.Student;
 import polsl.lab.take.project.model.Grade;
 import polsl.lab.take.project.model.Subject;
+import polsl.lab.take.project.repository.GradeRepository;
 import polsl.lab.take.project.repository.StudentRepository;
 import polsl.lab.take.project.repository.SubjectRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,7 +42,18 @@ public class StudentController {
 
 	@Autowired
 	private SubjectRepository subjectRepo;
-
+	
+	private Double calculateAverageForStudent(Long studentId) {
+        List<Grade> grades = studentRepo.findByStudentId(studentId).get(0).getGrades();
+        if (grades == null || grades.isEmpty()) {
+            return null;
+        }
+        return grades.stream()
+                .mapToInt(Grade::getGrade)
+                .average()
+                .orElse(0.0);
+    }
+	
 	@PostMapping
     @Operation(summary = "Add a student", description = "Add a student to the database")
     @ApiResponses({
@@ -171,13 +184,7 @@ public class StudentController {
 		try {
 			Student student = studentRepo.findById(studentId).orElseThrow(
 					() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found with id " + studentId));
-			List<polsl.lab.take.project.model.Grade> grades = student.getGrades();
-			Double average = null;
-			if (grades != null && !grades.isEmpty()) {
-				double sum = grades.stream().mapToInt(polsl.lab.take.project.model.Grade::getGrade).sum();
-				average = sum / grades.size();
-			}
-			StudentAverageDTO dto = new StudentAverageDTO(studentId, average);
+			StudentAverageDTO dto = new StudentAverageDTO(studentId, this.calculateAverageForStudent(studentId));
 			return ResponseEntity.ok(dto);
 		} catch (ResponseStatusException ex) {
 			throw ex;
@@ -186,7 +193,57 @@ public class StudentController {
 					"Error retrieving average grade for student " + studentId, e);
 		}
 	}
-
+	
+	@GetMapping("/averages")
+	@Operation(summary = "Get average grades for all students", 
+	          description = "Returns the arithmetic mean of all grades for each student")
+	@ApiResponses({ 
+	    @ApiResponse(responseCode = "200", description = "Averages retrieved", 
+	                content = @Content(mediaType = "application/json", 
+	                array = @ArraySchema(schema = @Schema(implementation = StudentAverageDTO.class)))),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) 
+	})
+	public ResponseEntity<List<StudentAverageDTO>> getStudentsAverages() {
+	    try {
+	        List<StudentAverageDTO> studentsAverages = getAllStudents().stream()
+	            .map(student -> {
+	                return new StudentAverageDTO(student.getStudentId(), 
+	                		this.calculateAverageForStudent(student.getStudentId()));
+	            })
+	            .collect(Collectors.toList());
+	        
+	        return ResponseEntity.ok(studentsAverages);
+	    } catch (Exception e) {
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+	                "Error retrieving average grades", e);
+	    }
+	}
+	
+	@GetMapping("/averages/{N}")
+	@Operation(summary = "Get average grades for N best students", 
+	          description = "Returns the arithmetic mean of all grades for each student")
+	@ApiResponses({ 
+	    @ApiResponse(responseCode = "200", description = "Averages retrieved", 
+	                content = @Content(mediaType = "application/json", 
+	                array = @ArraySchema(schema = @Schema(implementation = StudentAverageDTO.class)))),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) 
+	})
+	public ResponseEntity<List<StudentAverageDTO>> getStudentsAverages(@PathVariable int N) {
+	    try {
+	        List<StudentAverageDTO> studentsAverages = getAllStudents().stream()
+	            .map(student -> {
+	                return new StudentAverageDTO(student.getStudentId(), 
+	                		this.calculateAverageForStudent(student.getStudentId()));
+	            }).sorted((s1, s2) -> Double.compare(s2.getAverageGrade(), s1.getAverageGrade()))
+	            .limit(N)
+	            .collect(Collectors.toList());
+	        return ResponseEntity.ok(studentsAverages);
+	    } catch (Exception e) {
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+	                "Error retrieving average grades", e);
+	    }
+	}
+	
 	@GetMapping("/{studentId}/grades/{subjectId}")
 	@Operation(summary = "Get all grades of a student in a specific subject", description = "Returns list of grades for given studentId and subjectId")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "List of grades retrieved", content = {

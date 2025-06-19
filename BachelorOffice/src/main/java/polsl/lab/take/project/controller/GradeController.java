@@ -26,6 +26,7 @@ import polsl.lab.take.project.repository.SubjectRepository;
 import polsl.lab.take.project.repository.TeacherRepository;
 import polsl.lab.take.project.auth.GradeDTO;
 import polsl.lab.take.project.auth.GradeRequestDTO;
+import polsl.lab.take.project.auth.StudentAverageDTO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -229,6 +230,7 @@ public class GradeController {
 	        content = @Content
 	    )
 	})
+	
 	public String deleteGrade(@PathVariable Long gradeId) {
 		try {
 			Grade g = gradeRepo.findById(gradeId)
