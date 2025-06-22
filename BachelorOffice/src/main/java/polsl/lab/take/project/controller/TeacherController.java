@@ -18,6 +18,7 @@ import polsl.lab.take.project.model.Teacher;
 import polsl.lab.take.project.model.Grade;
 import polsl.lab.take.project.model.Student;
 import polsl.lab.take.project.model.Subject;
+import polsl.lab.take.project.repository.GradeRepository;
 import polsl.lab.take.project.repository.SubjectRepository;
 import polsl.lab.take.project.repository.TeacherRepository;
 import polsl.lab.take.project.auth.StudentDTO;
@@ -40,6 +41,10 @@ public class TeacherController {
 
 	@Autowired
 	private SubjectRepository subjectRepo;
+	
+	@Autowired
+	private GradeRepository gradeRepo;
+
 
 	@PostMapping
 	@Operation(summary = "Add a teacher", description = "Add a teacher to the database")
@@ -167,31 +172,39 @@ public class TeacherController {
         }
     }
 	
-	// TODO: Fix this endpoint - referential identity violation when removing teacher
 	@DeleteMapping("/{teacherId}")
 	@Operation(summary = "Delete a teacher", description = "Deletes a teacher from database and clears references in subjects")
 	@ApiResponses({
-			@ApiResponse(responseCode = "200", description = "Teacher successfully deleted. References in subjects cleared.", content = @Content(mediaType = "text/plain", examples = @ExampleObject(value = "Deleted teacher with id = 123"))),
-			@ApiResponse(responseCode = "404", description = "Teacher not found", content = @Content),
-			@ApiResponse(responseCode = "500", description = "Internal server error", content = @Content) })
+	    @ApiResponse(responseCode = "200", description = "Teacher successfully deleted. References in subjects cleared.",
+	        content = @Content(mediaType = "text/plain", examples = @ExampleObject(value = "Deleted teacher with id = 123"))),
+	    @ApiResponse(responseCode = "404", description = "Teacher not found", content = @Content),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
 	public ResponseEntity<String> deleteTeacher(@PathVariable Long teacherId) {
-		Teacher teacher = teacherRepo.findById(teacherId).orElseThrow(
-				() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found with id " + teacherId));
-		try {
-			List<Subject> subjects = teacher.getSubjects();
-			if (subjects != null && !subjects.isEmpty()) {
-				for (Subject subj : subjects) {
-					subj.setTeacher(null);
-					subjectRepo.save(subj);
-				}
-			}
-			teacherRepo.delete(teacher);
-		} catch (ResponseStatusException ex) {
-			throw ex;
-		} catch (Exception e) {
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-					"Error deleting teacher with id " + teacherId, e);
-		}
-		return ResponseEntity.ok("Deleted teacher with id = " + teacherId);
+	    Teacher teacher = teacherRepo.findById(teacherId).orElseThrow(
+	        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found with id " + teacherId));
+
+	    try {
+	        List<Subject> subjects = subjectRepo.findByTeacher(teacher);
+	        for (Subject subject : subjects) {
+	            subject.setTeacher(null);
+	        }
+	        subjectRepo.saveAll(subjects);
+
+	        List<Grade> grades = gradeRepo.findByTeacher_TeacherId(teacher.getTeacherId());
+	        for (Grade grade : grades) {
+	            grade.setTeacher(null);
+	        }
+	        gradeRepo.saveAll(grades);
+
+	        teacherRepo.delete(teacher);
+
+	        return ResponseEntity.ok("Deleted teacher with id = " + teacherId);
+
+	    } catch (Exception e) {
+	        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+	                "Error deleting teacher with id " + teacherId, e);
+	    }
 	}
+
 }

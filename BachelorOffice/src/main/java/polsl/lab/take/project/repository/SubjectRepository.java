@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 
 import polsl.lab.take.project.model.Subject;
+import polsl.lab.take.project.model.Teacher;
 
 @Repository
 public interface SubjectRepository extends JpaRepository<Subject, Long>{
@@ -17,4 +18,5 @@ public interface SubjectRepository extends JpaRepository<Subject, Long>{
 	
 	@Query("SELECT s FROM Subject s LEFT JOIN s.grades g GROUP BY s ORDER BY COUNT(g) DESC")
     List<Subject> findSubjectsOrderByGradesCountDesc(Pageable pageable);
+	List<Subject> findByTeacher(Teacher teacher);
 }

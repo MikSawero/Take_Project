@@ -29,7 +29,10 @@ import polsl.lab.take.project.auth.GradeRequestDTO;
 import polsl.lab.take.project.auth.StudentAverageDTO;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @RestController
 @RequestMapping("/grade")
@@ -206,6 +209,55 @@ public class GradeController {
 		return gradeDto;
 	}
 
+	@GetMapping("/distribution/{subjectId}")
+	@Operation(summary = "Get grade distribution for a subject", description = "Returns a map of grade values and their count for a given subject")
+	@ApiResponses({
+	    @ApiResponse(responseCode = "200", description = "Successfully retrieved grade distribution", content = @Content(mediaType = "application/json")),
+	    @ApiResponse(responseCode = "404", description = "Subject not found", content = @Content),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
+	public ResponseEntity<Map<Double, Integer>> getGradeDistribution(@PathVariable Long subjectId) {
+	    Subject subject = subjectRepo.findById(subjectId)
+	        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found with id " + subjectId));
+
+	    List<Grade> grades = gradeRepo.findBySubject_SubjectId(subject.getSubjectId());
+	    Map<Double, Integer> distribution = new TreeMap<>();
+
+	    for (Grade grade : grades) {
+	        double value = grade.getGrade();
+	        distribution.put(value, distribution.getOrDefault(value, 0) + 1);
+	    }
+
+	    return ResponseEntity.ok(distribution);
+	}
+	
+	@GetMapping("/subjects/average")
+	@Operation(summary = "Get subjects with average grades", description = "Returns subjects with their average grade")
+	@ApiResponses({
+	    @ApiResponse(responseCode = "200", description = "Successfully retrieved list", 
+	        content = @Content(mediaType = "application/json")),
+	    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+	})
+	public List<Map<String, Object>> getSubjectsWithAverages() {
+	    List<Map<String, Object>> response = new ArrayList<>();
+
+	    for (Subject subject : subjectRepo.findAll()) {
+	        List<Grade> grades = gradeRepo.findBySubject_SubjectId(subject.getSubjectId());
+
+	        if (!grades.isEmpty()) {
+	            double avg = grades.stream().mapToDouble(Grade::getGrade).average().orElse(0.0);
+	            Map<String, Object> subjectMap = new HashMap<>();
+	            subjectMap.put("id", subject.getSubjectId());
+	            subjectMap.put("name", subject.getSubjectName());
+	            subjectMap.put("average", avg);
+	            response.add(subjectMap);
+	        }
+	    }
+	    response.sort((a, b) -> Double.compare((Double)b.get("average"), (Double)a.get("average")));
+	    return response;
+	}
+
+
 	@DeleteMapping("/{gradeId}")
 	@Operation(summary = "Delete a grade", description = "Deletes a grade with given ID")
 	@ApiResponses({
@@ -230,7 +282,6 @@ public class GradeController {
 	        content = @Content
 	    )
 	})
-	
 	public String deleteGrade(@PathVariable Long gradeId) {
 		try {
 			Grade g = gradeRepo.findById(gradeId)
